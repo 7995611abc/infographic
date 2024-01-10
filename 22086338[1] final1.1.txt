@@ -1,0 +1,154 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import textwrap
+
+def load_data(Morality_Data):
+    """
+    Load data from the given data set
+    Returns:
+    - pd.DataFrame: Loaded data.
+    """
+    return pd.read_excel(Morality_Data)
+
+def process_data(data, countries, indicator_1, indicator_2):
+    """
+    Process the data by filtering based on countries and indicators.
+
+    Parameters:
+    - data (pd.DataFrame): Input data.
+    - countries (list): List of countries to filter.
+    - indicator_1 (str): First indicator.
+    - indicator_2 (str): Second indicator.
+
+    Returns:
+    - pd.DataFrame: Processed data.
+    """
+    bar_data_years = pd.DataFrame()
+    line_data = pd.DataFrame()
+    bar_data = pd.DataFrame()
+
+    for year in [2015, 2016, 2017, 2018, 2019]:
+        filtered_data = data[data["Country Name"].isin(countries) & 
+                             data["Indicator Name"].isin([indicator_1, indicator_2])]
+        pivoted_data = filtered_data.pivot(index = 'Country Name', columns = 'Indicator Name', values = year)
+        data_indicator_1 = pivoted_data[indicator_1].dropna()
+        data_indicator_2 = pivoted_data[indicator_2].dropna()
+        bar_data_years[year] = data_indicator_2
+        line_data[year] = data_indicator_1
+        bar_data[year] = data_indicator_2
+    
+    return bar_data_years, line_data, bar_data
+
+def plot_pie_chart(ax, data, title):
+    """
+    Plot a pie chart on the given axes.
+
+    Parameters:
+    - ax (matplotlib.axes.Axes): Axes to plot on.
+    - data (pd.Series): Data for the pie chart.
+    - title (str): Title of the chart.
+
+    Returns:
+    - display pie chart
+    """
+    wedges, texts, autotexts = ax.pie(data, labels = data.index, autopct = '%1.1f%%', startangle = 140, colors = plt.cm.Paired.colors)
+    ax.set_title(title)
+    
+    # Add values to legend
+    legend_labels = [f"{label}: {value:.1f}%" for label, value in zip(data.index, data)]
+    ax.legend(wedges, legend_labels, title = "Countries", loc = "center left", bbox_to_anchor = (1, 0.5))
+
+def plot_public_health(bar_data_years, line_data, bar_data):
+    """
+    Plot various infographics using the provided data.
+
+    Parameters:
+    - bar_data_years (pd.DataFrame): Data for bar charts.
+    - line_data (pd.DataFrame): Data for line charts.
+    - bar_data (pd.DataFrame): Data for stacked bar charts.
+
+    Returns:
+    - display the plots 
+    """
+    fig, axes = plt.subplots(nrows = 2, ncols = 2, figsize = (15, 15))
+
+    # Plot 1: Pie chart for Indicator 1 in 2019
+    plot_pie_chart(axes[0, 0], line_data[2019], 'Probability of Dying (Ages 20-24) - 2019')
+    axes[0, 0].grid(True, linestyle = '--', alpha = 0.6)
+
+    # Plot 2: Bar chart for Indicator 2 from 2015 to 2019
+    bar_data_years.T.plot(kind = 'bar', ax = axes[0, 1], color = plt.cm.Paired.colors)
+    axes[0, 1].set_title('Mortality from CVD, Cancer, Diabetes, CRD (Ages 30-70) - 2015-2019')
+    axes[0, 1].set_ylabel('% Mortality')
+    axes[0, 1].set_xlabel('Year')
+    axes[0, 1].grid(True, linestyle = '--', alpha = 0.6)
+
+    # Adding values to the legend for Plot 2
+    handles, labels = axes[0, 1].get_legend_handles_labels()
+    legend_labels = [f"{label}: {value:.1f}%" for label, value in zip(labels, bar_data_years.iloc[:, -1])]
+    axes[0, 1].legend(handles, legend_labels, title = "Countries", loc = "center left", bbox_to_anchor = (1, 0.5))
+
+    # Plot 3: Line plot for Indicator 1 over years
+    line_data_transposed = line_data.T
+
+    for country in line_data_transposed.columns:
+        axes[1, 0].plot(line_data_transposed.index.astype(str), line_data_transposed[country], marker = 'o', label = country)
+
+    axes[1, 0].set_title('Trend in Indicator 1 (2015-2019)')
+    axes[1, 0].set_ylabel('Value')
+    axes[1, 0].set_xlabel('Year')
+    axes[1, 0].set_xticks(range(len(line_data.columns)))
+    axes[1, 0].set_xticklabels(line_data.columns.astype(str))
+    axes[1, 0].grid(True, linestyle = '--', alpha = 0.6)
+
+    # Adding values to the legend for Plot 3
+    handles, labels = axes[1, 0].get_legend_handles_labels()
+    legend_labels = [f"{label}: {value:.1f}%" for label, value in zip(labels, line_data.iloc[:, -1])]
+    axes[1, 0].legend(handles, legend_labels, title = "Countries", loc = "center left", bbox_to_anchor = (1, 0.5))
+
+    # Plot 4: Stacked bar chart for Indicator 2 over years
+    bar_data.plot(kind = 'barh', stacked = True, ax = axes[1, 1], color = plt.cm.Paired.colors)
+    axes[1, 1].set_title('Trend in Indicator 2 (2015-2019)')
+    axes[1, 1].set_xlabel('Value')
+    axes[1, 1].grid(True, linestyle = '--', alpha = 0.6)
+
+    # Adding values to the legend for Plot 4
+    handles, labels = axes[1, 1].get_legend_handles_labels()
+    legend_labels = [f"{label}: {value:.1f}%" for label, value in zip(labels, bar_data.iloc[:, -1])]
+    axes[1, 1].legend(handles, legend_labels, title = "Year", loc = "center left", bbox_to_anchor = (1, 0.5))
+
+    # Stylish box for Name and Student number information
+    author_box = dict(boxstyle = 'round', facecolor = '#FF69B4', alpha = 0.5, edgecolor = 'black')
+    fig.text(0.82, 0.01, "Name: Chandra sekhar", ha = "left", va = "bottom", fontsize = 14, color = 'black', bbox = author_box)
+    fig.text(0.82, 0.05, "Student ID: 22086338", ha = "left", va = "bottom", fontsize = 14, color = 'black', bbox = author_box)
+
+    # abstract text based on plot observations
+    abstract_text = ("Public health disparities surfaced (2015-2019) among Argentina, Brazil, Mexico, the Netherlands, and the United Kingdom. "
+                    "Argentina saw a health indicator decline but grappled with 15.5% chronic disease mortality in 2019. Brazil faced a high youth mortality rate of 33.9%. "
+                    "Contrastingly, the Netherlands and the United Kingdom showcased effective health management, reflected in lower youth mortality and declining chronic disease mortality.")
+
+    fig.text(0.5, 0.01, textwrap.fill(abstract_text, width = 100), wrap = True, horizontalalignment = 'center', fontsize = 12)
+
+    plt.tight_layout()
+    plt.subplots_adjust(top = 0.9, right = 0.85, bottom = 0.1)  # Adjusting space to fit everything
+    plt.suptitle("A Comparative Evaluation of Public Health Measures ", fontsize = 22, y = 0.95, color = 'white', ha = 'center', backgroundcolor = 'black')
+
+    # Saving the visualization
+    plt.savefig('22086338.png', dpi = 300)
+
+# Load data set
+file_path = "Morality-Data.xlsx"
+data = load_data(file_path)
+
+# Define parameters
+countries = ["Argentina", "Brazil", "United Kingdom", "Mexico", "Netherlands"]
+indicator_1 = "Probability of dying among youth ages 20-24 years (per 1,000)"
+indicator_2 = "Mortality from CVD, cancer, diabetes or CRD between exact ages 30 and 70 (%)"
+
+# Processing data
+bar_data_years, line_data, bar_data = process_data(data, countries, indicator_1, indicator_2)
+
+# Plot infographics
+plot_public_health(bar_data_years, line_data, bar_data)
+plt.savefig('22086338.png', dpi = 300)
+sssssss
